@@ -1,0 +1,131 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: "CloudFormation template to create an S3 bucket with versioning, a DynamoDB table for Terraform state locking, and IAM roles/policies for secure access."
+
+Resources:
+  TerraformStateBucket:
+    Type: "AWS::S3::Bucket"
+    Properties:
+      BucketName: "my-terraform-state-bucket"
+      VersioningConfiguration:
+        Status: "Enabled"
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: "AES256"
+      Tags:
+        - Key: "Environment"
+          Value: "Terraform"
+        - Key: "Purpose"
+          Value: "State Storage"
+
+  TerraformStateLockTable:
+    Type: "AWS::DynamoDB::Table"
+    Properties:
+      TableName: "terraform-state-lock"
+      AttributeDefinitions:
+        - AttributeName: "LockID"
+          AttributeType: "S"
+      KeySchema:
+        - AttributeName: "LockID"
+          KeyType: "HASH"
+      BillingMode: "PAY_PER_REQUEST"
+      Tags:
+        - Key: "Environment"
+          Value: "Terraform"
+        - Key: "Purpose"
+          Value: "State Locking"
+
+  TerraformAccessPolicy:
+    Type: "AWS::IAM::Policy"
+    Properties:
+      PolicyName: "TerraformStateAccessPolicy"
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Action:
+              - "s3:GetObject"
+              - "s3:PutObject"
+              - "s3:DeleteObject"
+              - "s3:ListBucket"
+            Resource:
+              - !Sub "arn:aws:s3:::my-terraform-state-bucket"
+              - !Sub "arn:aws:s3:::my-terraform-state-bucket/*"
+          - Effect: "Allow"
+            Action: "dynamodb:*"
+            Resource: !Sub "arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/terraform-state-lock"
+
+  TerraformAccessRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      RoleName: "TerraformAccessRole"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Principal:
+              Service: "ec2.amazonaws.com"
+            Action: "sts:AssumeRole"
+      Policies:
+        - PolicyName: "TerraformAccess"
+          PolicyDocument:
+            Ref: TerraformAccessPolicy
+
+Outputs:
+  S3BucketName:
+    Description: "The name of the S3 bucket for Terraform state."
+    Value: !Ref TerraformStateBucket
+  
+  DynamoDBTableName:
+    Description: "The name of the DynamoDB table for state locking."
+    Value: !Ref TerraformStateLockTable
+
+  IAMRole:
+    Description: "IAM Role for Terraform access."
+    Value: !Ref TerraformAccessRole
+
+B
+B
+A
+A
+A
+A
+A
+A
+A
+A
+A
+A
+A
+A
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+B
+

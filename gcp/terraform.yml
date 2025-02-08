@@ -1,0 +1,26 @@
+resources:
+- name: terraform-state-bucket
+  type: storage.v1.bucket
+  properties:
+    location: US
+    storageClass: STANDARD
+    versioning:
+      enabled: true
+    iamConfiguration:
+      uniformBucketLevelAccess: true
+    encryption:
+      defaultKmsKeyName: projects/your-project-id/locations/us/keyRings/your-keyring/cryptoKeys/your-key
+    labels:
+      environment: "terraform"
+      purpose: "state-storage"
+
+- name: terraform-firestore-state-lock
+  type: gcp-types/firestore-v1beta2:projects.databases.documents
+  properties:
+    parent: projects/your-project-id/databases/(default)/documents
+    collectionId: terraformStateLock
+    documentId: stateLock
+    fields:
+      LockID:
+        stringValue: "locked"
+
