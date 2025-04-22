@@ -21,7 +21,7 @@ This setup creates the following AWS resources for managing Terraform state:
 
 
 Example
-'''
+```
 terraform {
   required_version = ">= 1.3.0"
   backend "s3" {
@@ -32,4 +32,4 @@ terraform {
     dynamodb_table = "terraform-state-lock"
   }
 }
-'''
+```
