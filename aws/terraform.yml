@@ -1,11 +1,32 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: "CloudFormation template to create an S3 bucket with versioning, a DynamoDB table for Terraform state locking, and IAM roles/policies for secure access."
 
+Parameters:
+  S3BucketNameParam:
+    Type: String
+    Description: "The desired name for the S3 bucket."
+    Default: "my-terraform-state-bucket"
+
+  DynamoDBTableNameParam:
+    Type: String
+    Description: "The desired name for the DynamoDB table."
+    Default: "terraform-state-lock"
+
+  IAMRoleNameParam:
+    Type: String
+    Description: "The desired name for the IAM role."
+    Default: "TerraformAccessRole"
+
+  IAMPolicyNameParam:
+    Type: String
+    Description: "The desired name for the IAM policy name attached to the role."
+    Default: "TerraformAccessPolicy"
+
 Resources:
   TerraformStateBucket:
     Type: "AWS::S3::Bucket"
     Properties:
-      BucketName: "my-terraform-state-bucket"
+      BucketName: !Ref S3BucketNameParam
       VersioningConfiguration:
         Status: "Enabled"
       BucketEncryption:
@@ -21,7 +42,7 @@ Resources:
   TerraformStateLockTable:
     Type: "AWS::DynamoDB::Table"
     Properties:
-      TableName: "terraform-state-lock"
+      TableName: !Ref DynamoDBTableNameParam
       AttributeDefinitions:
         - AttributeName: "LockID"
           AttributeType: "S"
@@ -35,30 +56,10 @@ Resources:
         - Key: "Purpose"
           Value: "State Locking"
 
-  TerraformAccessPolicy:
-    Type: "AWS::IAM::Policy"
-    Properties:
-      PolicyName: "TerraformStateAccessPolicy"
-      PolicyDocument:
-        Version: "2012-10-17"
-        Statement:
-          - Effect: "Allow"
-            Action:
-              - "s3:GetObject"
-              - "s3:PutObject"
-              - "s3:DeleteObject"
-              - "s3:ListBucket"
-            Resource:
-              - !Sub "arn:aws:s3:::my-terraform-state-bucket"
-              - !Sub "arn:aws:s3:::my-terraform-state-bucket/*"
-          - Effect: "Allow"
-            Action: "dynamodb:*"
-            Resource: !Sub "arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/terraform-state-lock"
-
   TerraformAccessRole:
     Type: "AWS::IAM::Role"
     Properties:
-      RoleName: "TerraformAccessRole"
+      RoleName: !Ref IAMRoleNameParam
       AssumeRolePolicyDocument:
         Version: "2012-10-17"
         Statement:
@@ -67,15 +68,28 @@ Resources:
               Service: "ec2.amazonaws.com"
             Action: "sts:AssumeRole"
       Policies:
-        - PolicyName: "TerraformAccess"
+        - PolicyName: !Ref IAMPolicyNameParam
           PolicyDocument:
-            Ref: TerraformAccessPolicy
+            Version: "2012-10-17"
+            Statement:
+              - Effect: "Allow"
+                Action:
+                  - "s3:GetObject"
+                  - "s3:PutObject"
+                  - "s3:DeleteObject"
+                  - "s3:ListBucket"
+                Resource:
+                  - !Sub "arn:aws:s3:::${S3BucketNameParam}"
+                  - !Sub "arn:aws:s3:::${S3BucketNameParam}/*"
+              - Effect: "Allow"
+                Action: "dynamodb:*"
+                Resource: !Sub "arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${DynamoDBTableNameParam}"
 
 Outputs:
   S3BucketName:
     Description: "The name of the S3 bucket for Terraform state."
     Value: !Ref TerraformStateBucket
-  
+
   DynamoDBTableName:
     Description: "The name of the DynamoDB table for state locking."
     Value: !Ref TerraformStateLockTable
